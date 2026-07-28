@@ -1,0 +1,56 @@
+{
+  "name": "@feedlog/widget",
+  "version": "0.0.1",
+  "description": "Embeddable feedback widget for FeedLog. One function, zero runtime dependencies.",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "author": "canghai118 <3394863+canghai118@users.noreply.github.com>",
+  "homepage": "https://github.com/linkcraftstudio/feedlog-widget#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linkcraftstudio/feedlog-widget.git"
+  },
+  "bugs": {
+    "url": "https://github.com/linkcraftstudio/feedlog-widget/issues"
+  },
+  "keywords": [
+    "feedlog",
+    "feedback",
+    "widget",
+    "embed",
+    "sdk"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "size": "node scripts/size.mjs",
+    "build:demo": "node scripts/build-demo.mjs",
+    "demo": "node scripts/build-demo.mjs && node scripts/serve-demo.mjs",
+    "dev:demo": "node scripts/dev-demo.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  }
+}

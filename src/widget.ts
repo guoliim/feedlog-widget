@@ -1,0 +1,200 @@
+import { fetchConfig } from './api'
+import { AuthManager } from './auth'
+import { consumeLoginPending } from './login-marker'
+import { SessionCache } from './session-cache'
+import type { AuthReason, InboundMessage, WidgetAuth, WidgetTheme } from './types'
+import { WidgetUi } from './ui'
+import { UnreadTracker } from './unread'
+
+export interface BootOptions {
+  baseUrl: string
+  origin: string
+  auth: WidgetAuth
+  theme: WidgetTheme
+  /** Same-origin path of the hosted embed page; defaults resolved in index.ts. */
+  embedPath: string
+}
+
+const LOAD_ERROR = 'Feedback could not be loaded.'
+
+export async function boot(options: BootOptions): Promise<void> {
+  let config
+  try {
+    config = await fetchConfig(options.baseUrl)
+  }
+  catch {
+    config = null
+  }
+  // No config means no verdict on `enabled`, and a launcher that cannot reach
+  // its backend is worse than no launcher at all.
+  if (!config) {
+    console.warn('[feedlog/widget] could not load widget config; nothing was rendered')
+    return
+  }
+  if (!config.enabled) return
+
+  await domReady()
+  new Widget(options, new WidgetUi(config.branding, options.theme)).start()
+}
+
+class Widget {
+  private readonly auth: AuthManager
+  private readonly unread: UnreadTracker
+  /** The token the mounted iframe was built with — `null` means a signed-out frame. */
+  private frameToken: string | null = null
+
+  constructor(private readonly options: BootOptions, private readonly ui: WidgetUi) {
+    const cache = new SessionCache(options.origin)
+    this.auth = new AuthManager(options.baseUrl, options.origin, options.auth, cache)
+    this.unread = new UnreadTracker(options.baseUrl, options.origin, this.auth, count => this.ui.setBadge(count))
+  }
+
+  start(): void {
+    this.ui.mount()
+    this.ui.onLauncherClick(() => this.toggle())
+    window.addEventListener('message', this.onMessage)
+    this.unread.start()
+    // A redirect-style `login()` navigated the page away mid-flow; the leftover
+    // marker is the only trace that the user was on their way into the widget.
+    if (consumeLoginPending(this.options.origin)) void this.open()
+  }
+
+  private toggle(): void {
+    if (this.ui.isOpen) {
+      this.ui.closePanel()
+      return
+    }
+    void this.open()
+  }
+
+  private async open(): Promise<void> {
+    this.ui.openPanel()
+    if (!this.ui.hasIframe) this.ui.showLoading()
+    // Re-resolving on every open is what keeps the widget aligned with the host's
+    // sign-in state; the session cache keeps it from costing a round trip.
+    await this.sync({})
+  }
+
+  /**
+   * Concurrency is handled one level down: AuthManager runs a single flow at a
+   * time and hands joiners the same promise, so overlapping calls here cannot
+   * produce two exchanges or two login popups.
+   */
+  private async sync(
+    opts: { allowLogin?: boolean, ignoreCache?: boolean },
+    staleToken?: string | null,
+  ): Promise<void> {
+    try {
+      let session = await this.auth.resolve(opts)
+      // The frame ran with this exact token and asked for auth anyway, so the
+      // token is dead no matter what the cache's expiry claims.
+      if (session && staleToken && session.token === staleToken) {
+        session = await this.auth.resolve({ ...opts, ignoreCache: true })
+      }
+      const token = session?.token ?? null
+      if (!this.ui.hasIframe || token !== this.frameToken) this.mountFrame(token)
+    }
+    catch {
+      // getToken() or exchange threw: a temporary failure, not a sign-out. Keep a
+      // working frame if there is one, otherwise offer a retry.
+      if (!this.ui.hasIframe) this.ui.showError(LOAD_ERROR, () => this.retry())
+    }
+  }
+
+  private retry(): void {
+    this.ui.showLoading()
+    void this.sync({})
+  }
+
+  private mountFrame(token: string | null): void {
+    this.frameToken = token
+    this.ui.showLoading()
+    // From here the iframe owns the count — it can zero it the instant the user
+    // reads a thread, which no polling interval could match.
+    this.unread.takeOver()
+    if (!token) this.unread.push(0)
+
+    const url = new URL(this.options.embedPath, this.options.baseUrl)
+    url.searchParams.set('theme', this.options.theme)
+    // The frame needs a concrete targetOrigin for its postMessage calls and
+    // cannot derive one reliably: Firefox has no location.ancestorOrigins, and
+    // the host's referrer-policy may strip the referrer.
+    url.searchParams.set('origin', window.location.origin)
+    // The session token rides in the fragment and nowhere else: fragments are not
+    // sent to the server, so it stays out of access logs and Referer headers.
+    const src = token ? `${url.toString()}#token=${encodeURIComponent(token)}` : url.toString()
+    this.ui.setIframe(src)
+  }
+
+  private onMessage = (event: MessageEvent): void => {
+    if (event.origin !== this.options.origin) return
+    const frame = this.ui.frameWindow
+    if (!frame || event.source !== frame) return
+
+    const data: unknown = event.data
+    if (!data || typeof data !== 'object') return
+    const message = data as InboundMessage
+    if (message.v !== 1 || typeof message.type !== 'string') return
+
+    switch (message.type) {
+      case 'ready':
+        this.ui.showContent()
+        return
+      case 'auth-requested':
+        void this.handleAuthRequest(message.payload?.reason)
+        return
+      case 'unread':
+        this.unread.push(Number(message.payload?.count))
+        return
+      case 'navigate':
+        void this.handleNavigate(message.payload)
+        return
+      case 'close-request':
+        this.ui.closePanel()
+        return
+      default:
+        // Unknown types are ignored so a newer iframe can ship messages an older
+        // SDK has never heard of.
+    }
+  }
+
+  private handleAuthRequest(reason: AuthReason | undefined): Promise<void> {
+    // Both reasons start with a silent getToken — the user may have signed in on
+    // another tab. Only an explicit click may escalate to the host's login UI;
+    // an expired session must never make a popup appear unprompted.
+    return this.sync(
+      { allowLogin: reason === 'user', ignoreCache: reason === 'expired' },
+      this.frameToken,
+    )
+  }
+
+  private async handleNavigate(payload: { to?: string, slug?: string } | undefined): Promise<void> {
+    const slug = payload?.slug
+    if (payload?.to !== 'feedback' || typeof slug !== 'string' || !slug) return
+
+    const path = `/p/${encodeURIComponent(slug)}`
+    let target = new URL(path, this.options.baseUrl).toString()
+    try {
+      const jwt = await this.auth.getCustomerJwt()
+      if (jwt) {
+        const handoff = new URL('/api/sso/jwt', this.options.baseUrl)
+        handoff.searchParams.set('jwt', jwt)
+        handoff.searchParams.set('return_to', path)
+        target = handoff.toString()
+      }
+    }
+    catch {
+      // Fall through to the public URL — the page is readable signed out.
+    }
+    // noopener is mandatory, and window.open returns null under it, so the URL
+    // has to be final before opening: no pre-opened blank tab to fill in later.
+    window.open(target, '_blank', 'noopener')
+  }
+}
+
+function domReady(): Promise<void> {
+  if (document.body) return Promise.resolve()
+  return new Promise((resolve) => {
+    document.addEventListener('DOMContentLoaded', () => resolve(), { once: true })
+  })
+}

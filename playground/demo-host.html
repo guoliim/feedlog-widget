@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paceboard — Momentum analytics for teams that ship</title>
+<meta name="description" content="Paceboard turns your team's work into a clear picture of momentum, so you always know what's on track and what needs a nudge.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --brand: #5b57eb;
+    --brand-600: #4f4bd6;
+    --brand-700: #423fb8;
+    --brand-tint: #eef0fe;
+    --bg: #ffffff;
+    --bg-soft: #f6f7fb;
+    --bg-elev: #ffffff;
+    --ink: #14161f;
+    --ink-soft: #4a5064;
+    --ink-faint: #767c92;
+    --line: #e7e9f2;
+    --line-soft: #eef0f6;
+    --shadow: 0 1px 2px rgba(20,22,31,.04), 0 12px 32px rgba(20,22,31,.07);
+    --shadow-sm: 0 1px 2px rgba(20,22,31,.05), 0 4px 14px rgba(20,22,31,.06);
+    --radius: 16px;
+  }
+  :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    /* dark values applied via media query below unless forced light */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d0f16;
+      --bg-soft: #12141d;
+      --bg-elev: #171a24;
+      --ink: #eef0f6;
+      --ink-soft: #b3b8c9;
+      --ink-faint: #838999;
+      --line: #262a38;
+      --line-soft: #1e222e;
+      --brand-tint: #1b1c34;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.4);
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0f16;
+    --bg-soft: #12141d;
+    --bg-elev: #171a24;
+    --ink: #eef0f6;
+    --ink-soft: #b3b8c9;
+    --ink-faint: #838999;
+    --line: #262a38;
+    --line-soft: #1e222e;
+    --brand-tint: #1b1c34;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 16px 40px rgba(0,0,0,.4);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  /* scroll-padding keeps in-page anchors (#features …) from landing under the
+     sticky demo banner (40px) + nav (66px). */
+  html { scroll-behavior: smooth; scroll-padding-top: 112px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { width: 100%; max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+  .eyebrow { font-size: 13px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); }
+  h1, h2, h3 { letter-spacing: -.02em; line-height: 1.1; margin: 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    height: 44px; padding: 0 20px; border-radius: 11px; border: 1px solid transparent;
+    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: transform .08s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 1px 2px rgba(91,87,235,.35), 0 8px 20px rgba(91,87,235,.28); }
+  .btn-primary:hover { background: var(--brand-600); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { background: var(--bg-soft); }
+  .btn-sm { height: 38px; padding: 0 15px; font-size: 14px; border-radius: 9px; }
+
+  /* ---------- demo banner ---------- */
+  /* Sticky above the nav and always on screen, so it's obvious at any scroll
+     position. Fixed 40px height so the nav's top offset stays predictable. */
+  .demo-banner {
+    position: sticky; top: 0; z-index: 60; height: 40px;
+    background: var(--brand-tint); border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center;
+  }
+  .demo-banner-inner {
+    max-width: 1140px; width: 100%; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 13.5px; line-height: 1.2; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .demo-pill {
+    flex: none; background: var(--brand); color: #fff; font-weight: 700;
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 6px;
+  }
+  .demo-banner-text { color: var(--ink-soft); }
+  .demo-banner-text b { color: var(--ink); font-weight: 650; }
+  .demo-banner-text a { color: var(--brand); font-weight: 650; white-space: nowrap; }
+  .demo-banner-text a:hover { text-decoration: underline; }
+  .demo-banner-file { color: var(--brand-700); font-weight: 600; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo-banner-file { color: #a9a5f7; } }
+  :root[data-theme="dark"] .demo-banner-file { color: #a9a5f7; }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky; top: 40px; z-index: 50;
+    backdrop-filter: saturate(1.2) blur(10px);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 20px; height: 66px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 750; font-size: 18px; letter-spacing: -.02em; }
+  .brand .mark { width: 30px; height: 30px; flex: none; }
+  .nav-links { display: flex; gap: 6px; margin-left: 14px; }
+  .nav-links a { padding: 8px 12px; border-radius: 8px; color: var(--ink-soft); font-size: 15px; font-weight: 550; }
+  .nav-links a:hover { color: var(--ink); background: var(--bg-soft); }
+  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex: none;
+    background: linear-gradient(135deg, var(--brand), #8a86f5);
+    color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700;
+  }
+  .user-chip { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 550; color: var(--ink-soft); }
+  @media (max-width: 780px) { .nav-links { display: none; } .user-chip .email { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 92px 0 60px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -200px 0 auto 0; height: 520px; z-index: -1;
+    background: radial-gradient(60% 80% at 50% 0%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%);
+  }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+  @media (max-width: 940px) { .hero-grid { grid-template-columns: 1fr; gap: 40px; } .hero { padding-top: 64px; } }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--bg-elev);
+    font-size: 13px; font-weight: 600; color: var(--ink-soft); box-shadow: var(--shadow-sm);
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+  .hero h1 { font-size: clamp(38px, 5.4vw, 60px); margin: 20px 0 0; }
+  .hero p.lede { font-size: 19px; color: var(--ink-soft); margin: 20px 0 0; max-width: 30em; }
+  .hero-cta { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  .hero-note { margin-top: 16px; font-size: 13.5px; color: var(--ink-faint); }
+
+  /* dashboard mock */
+  .mock {
+    border-radius: 18px; background: var(--bg-elev); border: 1px solid var(--line);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .mock-bar { display: flex; align-items: center; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+  .mock-bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: block; }
+  .mock-body { padding: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .stat-card { border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px; background: var(--bg); }
+  .stat-card .k { font-size: 12px; color: var(--ink-faint); font-weight: 600; }
+  .stat-card .v { font-size: 26px; font-weight: 750; letter-spacing: -.02em; margin-top: 2px; }
+  .stat-card .up { color: #22c55e; font-size: 12.5px; font-weight: 650; }
+  .mock-chart { grid-column: 1 / -1; border: 1px solid var(--line-soft); border-radius: 12px; padding: 14px; background: var(--bg); }
+  .mock-chart .lg { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-faint); margin-bottom: 6px; }
+
+  /* ---------- logos ---------- */
+  .logos { padding: 22px 0 8px; }
+  .logos p { text-align: center; font-size: 13px; color: var(--ink-faint); font-weight: 600; letter-spacing: .04em; margin: 0 0 18px; }
+  .logo-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 34px; opacity: .72; }
+  .logo-row svg { height: 22px; width: auto; color: var(--ink-soft); }
+
+  /* ---------- section ---------- */
+  section.block { padding: 76px 0; }
+  .block-head { max-width: 40ch; margin: 0 auto 46px; text-align: center; }
+  .block-head h2 { font-size: clamp(28px, 3.6vw, 40px); margin-top: 12px; }
+  .block-head p { color: var(--ink-soft); font-size: 17px; margin: 14px 0 0; }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 860px) { .features { grid-template-columns: 1fr; } }
+  .feature { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow-sm); }
+  .feature .ic { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-tint); color: var(--brand); display: grid; place-items: center; margin-bottom: 16px; }
+  .feature h3 { font-size: 18px; }
+  .feature p { color: var(--ink-soft); font-size: 15px; margin: 10px 0 0; }
+
+  .stats { background: var(--bg-soft); border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; padding: 56px 0; text-align: center; }
+  @media (max-width: 720px) { .stats-grid { grid-template-columns: repeat(2, 1fr); row-gap: 40px; } }
+  .stats .n { font-size: clamp(34px, 4.4vw, 46px); font-weight: 780; letter-spacing: -.03em; color: var(--brand); }
+  .stats .l { color: var(--ink-soft); font-size: 15px; margin-top: 4px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; gap: 32px; } }
+  .split ul { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 14px; }
+  .split li { display: flex; gap: 12px; align-items: flex-start; color: var(--ink-soft); }
+  .split li svg { flex: none; margin-top: 3px; color: var(--brand); }
+  .split li b { color: var(--ink); font-weight: 650; }
+
+  .cta-band { padding: 20px 0 90px; }
+  .cta-inner {
+    background: linear-gradient(120deg, var(--brand), #7a76f0 60%, #9d99f6);
+    border-radius: 22px; padding: 52px 44px; text-align: center; color: #fff; box-shadow: 0 20px 50px rgba(91,87,235,.35);
+  }
+  .cta-inner h2 { font-size: clamp(26px, 3.4vw, 36px); }
+  .cta-inner p { opacity: .92; margin: 12px 0 26px; font-size: 17px; }
+  .cta-inner .btn-primary { background: #fff; color: var(--brand-700); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+  .cta-inner .btn-primary:hover { background: #f2f2ff; }
+
+  footer.ft { border-top: 1px solid var(--line-soft); background: var(--bg-soft); padding: 54px 0 34px; }
+  .ft-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 30px; }
+  @media (max-width: 780px) { .ft-grid { grid-template-columns: 1fr 1fr; row-gap: 34px; } }
+  .ft h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); margin: 0 0 14px; }
+  .ft a { display: block; color: var(--ink-soft); font-size: 14.5px; padding: 5px 0; }
+  .ft a:hover { color: var(--ink); }
+  .ft .about { color: var(--ink-soft); font-size: 14.5px; max-width: 28ch; margin: 14px 0 0; }
+  .ft-bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13px; }
+  .demo-tag { display: inline-flex; align-items: center; gap: 7px; }
+  .demo-tag .badge { background: var(--brand-tint); color: var(--brand); padding: 2px 8px; border-radius: 6px; font-weight: 650; font-size: 12px; }
+
+  /* ---------- login modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 200; display: none; place-items: center; padding: 20px;
+    background: rgba(15,17,25,.5); backdrop-filter: blur(3px);
+  }
+  .modal-backdrop.open { display: grid; }
+  .modal {
+    width: 100%; max-width: 400px; background: var(--bg-elev); border: 1px solid var(--line);
+    border-radius: 18px; box-shadow: var(--shadow); padding: 28px; animation: pop .16s ease-out;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+  .modal .m-brand { display: flex; align-items: center; gap: 9px; font-weight: 750; font-size: 16px; }
+  .modal h3 { font-size: 21px; margin: 18px 0 4px; }
+  .modal .sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input {
+    width: 100%; height: 44px; padding: 0 13px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); font: inherit; font-size: 15px;
+  }
+  .field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent); }
+  .modal .m-note { font-size: 12.5px; color: var(--ink-faint); margin: 4px 0 18px; }
+  .modal .m-actions { display: flex; gap: 10px; }
+  .modal .m-actions .btn { flex: 1; }
+  .modal-x { position: absolute; }
+
+  /* ---------- control panel ---------- */
+  #panel-fab {
+    position: fixed; left: 20px; bottom: 20px; z-index: 150;
+    display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--bg-elev); color: var(--ink);
+    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
+  }
+  #panel-fab:hover { background: var(--bg-soft); }
+  #panel-fab .gear { color: var(--brand); }
+  #panel {
+    position: fixed; left: 20px; bottom: 20px; z-index: 151; width: 340px; max-width: calc(100vw - 40px);
+    display: none; flex-direction: column; background: var(--bg-elev); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  #panel.open { display: flex; }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px; padding: 13px 14px; cursor: grab;
+    border-bottom: 1px solid var(--line-soft); user-select: none;
+  }
+  .panel-head.dragging { cursor: grabbing; }
+  .panel-head .t { font-weight: 700; font-size: 14px; }
+  .panel-head .t small { display: block; font-weight: 500; font-size: 11px; color: var(--ink-faint); letter-spacing: .02em; }
+  .panel-head .grip { color: var(--ink-faint); }
+  .panel-head .x { margin-left: auto; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; display: grid; place-items: center; }
+  .panel-head .x:hover { background: var(--bg-soft); color: var(--ink); }
+  .panel-body { padding: 14px; display: grid; gap: 16px; max-height: min(70vh, 560px); overflow-y: auto; }
+  .p-group { display: grid; gap: 7px; }
+  .p-group > .lbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .p-group input[type=text], .p-group textarea, .p-group select {
+    width: 100%; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); font: inherit; font-size: 13.5px;
+  }
+  .p-group textarea { resize: vertical; min-height: 62px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
+  .p-group input:focus, .p-group textarea:focus, .p-group select:focus { outline: none; border-color: var(--brand); }
+  .p-hint { font-size: 11.5px; color: var(--ink-faint); line-height: 1.5; }
+  .p-hint code { background: var(--bg-soft); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+  .p-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .p-row .btn { flex: 1; min-width: 0; }
+  .p-status { display: grid; gap: 5px; font-size: 12.5px; }
+  .p-status .row { display: flex; justify-content: space-between; gap: 10px; }
+  .p-status .row .k { color: var(--ink-faint); }
+  .p-status .row .val { font-weight: 600; text-align: right; }
+  .p-status .val.ok { color: #22c55e; }
+  .p-status .val.no { color: #ef4444; }
+  .p-status .val.warn { color: #f59e0b; }
+  .p-log { font-family: ui-monospace, Menlo, monospace; font-size: 11px; line-height: 1.5; color: var(--ink-soft); background: var(--bg-soft); border: 1px solid var(--line-soft); border-radius: 9px; padding: 9px 10px; max-height: 116px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .callout { font-size: 12px; line-height: 1.55; color: var(--ink-soft); background: var(--brand-tint); border-radius: 9px; padding: 10px 11px; }
+  .callout b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- =================== DEMO BANNER =================== -->
+<div class="demo-banner" role="note" aria-label="Demo notice">
+  <div class="demo-banner-inner">
+    <span class="demo-pill">Demo</span>
+    <span class="demo-banner-text">Demo for the <b>FeedLog widget</b> — Paceboard is a fictional product used to show the widget in a real page.</span>
+  </div>
+</div>
+
+<!-- =================== NAV =================== -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top">
+      <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="var(--brand)"/>
+        <path d="M8 21V15M13 21V9M18 21V13M23 21V11" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+      Paceboard
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Product</a>
+      <a href="#solutions">Solutions</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#docs">Docs</a>
+    </nav>
+    <div class="nav-right" id="nav-right"><!-- rendered by JS --></div>
+  </div>
+</header>
+
+<main id="top">
+  <!-- =================== HERO =================== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><span class="dot"></span> Now with live sprint forecasting</span>
+        <h1>Momentum analytics for teams that ship.</h1>
+        <p class="lede">Paceboard turns everyday work into a clear picture of momentum — so you always know what's on track, what's slipping, and where a small nudge pays off.</p>
+        <div class="hero-cta">
+          <button class="btn btn-primary" data-cta="start">Start free <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="btn btn-ghost" data-cta="demo">Book a demo</button>
+        </div>
+        <p class="hero-note">No credit card required · 14-day trial · Cancel anytime</p>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <div class="mock-bar"><i></i><i></i><i></i></div>
+        <div class="mock-body">
+          <div class="stat-card"><div class="k">Cycle time</div><div class="v">3.4d</div><div class="up">▼ 18% vs last sprint</div></div>
+          <div class="stat-card"><div class="k">Throughput</div><div class="v">47</div><div class="up">▲ 9% this week</div></div>
+          <div class="mock-chart">
+            <div class="lg"><span>Momentum</span><span>Last 8 weeks</span></div>
+            <svg viewBox="0 0 320 90" width="100%" height="90" preserveAspectRatio="none">
+              <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--brand)" stop-opacity=".28"/>
+                <stop offset="1" stop-color="var(--brand)" stop-opacity="0"/>
+              </linearGradient></defs>
+              <path d="M0 70 L45 60 L90 64 L135 44 L180 48 L225 28 L270 24 L320 12" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M0 70 L45 60 L90 64 L135 44 L180 48 L225 28 L270 24 L320 12 L320 90 L0 90 Z" fill="url(#g)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== LOGOS =================== -->
+  <div class="logos wrap">
+    <p>Trusted by product and delivery teams at</p>
+    <div class="logo-row">
+      <svg viewBox="0 0 120 24"><text x="0" y="18" font-family="sans-serif" font-size="18" font-weight="800" fill="currentColor">Northwind</text></svg>
+      <svg viewBox="0 0 96 24"><text x="0" y="18" font-family="sans-serif" font-size="18" font-weight="700" fill="currentColor" letter-spacing="1">HELIX</text></svg>
+      <svg viewBox="0 0 110 24"><text x="0" y="18" font-family="sans-serif" font-size="18" font-weight="800" fill="currentColor">Everpost</text></svg>
+      <svg viewBox="0 0 88 24"><text x="0" y="18" font-family="sans-serif" font-size="18" font-weight="700" fill="currentColor">Quanta</text></svg>
+      <svg viewBox="0 0 120 24"><text x="0" y="18" font-family="sans-serif" font-size="18" font-weight="800" fill="currentColor">Blueacre</text></svg>
+    </div>
+  </div>
+
+  <!-- =================== FEATURES =================== -->
+  <section class="block" id="features">
+    <div class="wrap">
+      <div class="block-head">
+        <span class="eyebrow">Why Paceboard</span>
+        <h2>Everything your team needs to keep moving</h2>
+        <p>Signal over noise. Paceboard connects to the tools you already use and surfaces the few things worth acting on.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 15l3-4 3 3 4-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Live momentum</h3>
+          <p>See velocity, cycle time, and flow in real time — not in a report you assemble on Friday afternoon.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7l7-4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h3>Early warnings</h3>
+          <p>Paceboard flags work that's about to slip while there's still time to unblock it, and tells you who to ask.</p>
+        </div>
+        <div class="feature">
+          <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 8h10M7 12h6M7 16h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" stroke-width="2"/></svg></div>
+          <h3>Shared clarity</h3>
+          <p>One picture of reality for engineers, PMs, and leadership — no more three dashboards that disagree.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== STATS =================== -->
+  <div class="stats" id="solutions">
+    <div class="wrap stats-grid">
+      <div><div class="n">2.1×</div><div class="l">faster status updates</div></div>
+      <div><div class="n">34%</div><div class="l">less cycle-time variance</div></div>
+      <div><div class="n">8,400+</div><div class="l">teams onboarded</div></div>
+      <div><div class="n">99.98%</div><div class="l">uptime last 12 months</div></div>
+    </div>
+  </div>
+
+  <!-- =================== SPLIT =================== -->
+  <section class="block" id="pricing">
+    <div class="wrap split">
+      <div>
+        <span class="eyebrow">Built for the whole team</span>
+        <h2 style="font-size:clamp(26px,3.4vw,36px);margin-top:12px">Plans that scale from a squad to the whole org</h2>
+        <p style="color:var(--ink-soft);font-size:16px;margin-top:14px">Start free, invite your team, and only pay as you grow. Every plan includes the momentum dashboard and early-warning signals.</p>
+        <ul>
+          <li><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Unlimited dashboards</b> — one per team, project, or initiative.</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Native integrations</b> with your issue tracker, repo, and CI.</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>SSO &amp; SCIM</b> on every business plan, no add-on fees.</span></li>
+        </ul>
+        <div style="margin-top:26px"><button class="btn btn-primary" data-cta="start">Get started free</button></div>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <div class="mock-bar"><i></i><i></i><i></i></div>
+        <div class="mock-body" style="grid-template-columns:1fr">
+          <div class="stat-card"><div class="k">Team</div><div class="v" style="font-size:19px">Platform Squad</div></div>
+          <div class="stat-card"><div class="k">On track</div><div class="v">12 / 15</div><div class="up">3 need attention</div></div>
+          <div class="stat-card"><div class="k">Forecast</div><div class="v" style="font-size:19px">Ships Thu</div><div class="up">92% confidence</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== CTA =================== -->
+  <section class="cta-band" id="docs">
+    <div class="wrap">
+      <div class="cta-inner">
+        <h2>Give your team its momentum back</h2>
+        <p>Set up your first dashboard in under five minutes.</p>
+        <button class="btn btn-primary" data-cta="start">Start free</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- =================== FOOTER =================== -->
+<footer class="ft">
+  <div class="wrap">
+    <div class="ft-grid">
+      <div>
+        <a class="brand" href="#top">
+          <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="var(--brand)"/>
+            <path d="M8 21V15M13 21V9M18 21V13M23 21V11" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+          </svg> Paceboard
+        </a>
+        <p class="about">Momentum analytics for teams that ship. Paceboard is a fictional product used to demo the FeedLog feedback widget.</p>
+      </div>
+      <div class="ft"><h4>Product</h4><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#solutions">Integrations</a><a href="#docs">Changelog</a></div>
+      <div class="ft"><h4>Company</h4><a href="#">About</a><a href="#">Careers</a><a href="#">Blog</a><a href="#">Contact</a></div>
+      <div class="ft"><h4>Resources</h4><a href="#docs">Docs</a><a href="#">API</a><a href="#">Status</a><a href="#">Support</a></div>
+    </div>
+    <div class="ft-bottom">
+      <span>© 2026 Paceboard, Inc. (fictional). All rights reserved.</span>
+      <span class="demo-tag"><span class="badge">Demo</span> Integration host for <b>@feedlog/widget</b> — the launcher is bottom-right.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- =================== LOGIN MODAL =================== -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Sign in to Paceboard">
+    <div class="m-brand">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="var(--brand)"/><path d="M8 21V15M13 21V9M18 21V13M23 21V11" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+      Paceboard
+    </div>
+    <h3>Sign in</h3>
+    <p class="sub">Welcome back. This is a mock sign-in — any email and password work.</p>
+    <div class="field">
+      <label for="m-email">Work email</label>
+      <input id="m-email" type="email" value="alex@paceboard.example" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="m-pass">Password</label>
+      <input id="m-pass" type="password" value="demo-password" autocomplete="off">
+    </div>
+    <p class="m-note">FeedLog never sees these credentials — this login belongs to the host app. That is exactly what the widget's <code>auth.login</code> hook is for.</p>
+    <div class="m-actions">
+      <button class="btn btn-ghost" id="m-cancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="m-submit" type="button">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== CONTROL PANEL =================== -->
+<button id="panel-fab" type="button" aria-label="Open demo controls">
+  <svg class="gear" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/><path d="M19.4 13a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 006.6 19a1.6 1.6 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H1a2 2 0 110-4h.1A1.6 1.6 0 003 6.6a1.6 1.6 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 001.8.3H7a1.6 1.6 0 001-1.5V1a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1 1.6 1.6 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8V7a1.6 1.6 0 001.5 1H23a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1z" stroke="currentColor" stroke-width="1.6"/></svg>
+  Demo controls
+</button>
+
+<div id="panel">
+  <div class="panel-head" id="panel-head">
+    <svg class="grip" width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="4" r="1.3"/><circle cx="11" cy="4" r="1.3"/><circle cx="5" cy="8" r="1.3"/><circle cx="11" cy="8" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="11" cy="12" r="1.3"/></svg>
+    <div class="t">Widget demo controls <small>@feedlog/widget</small></div>
+    <button class="x" id="panel-close" type="button" aria-label="Close">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="panel-body">
+    <div class="p-group">
+      <span class="lbl">Connection</span>
+      <input id="p-baseurl" type="text" placeholder="http://localhost:3000" spellcheck="false">
+      <span class="p-hint">Your FeedLog org address. The live widget needs a FeedLog backend reachable here.</span>
+      <input id="p-embed" type="text" placeholder="/widget/embed" spellcheck="false" style="margin-top:8px">
+      <span class="p-hint"><b>Embed path</b> (SDK <code>embedPath</code> option). The page the widget loads in its iframe. SDK default is <code>/widget/embed</code>; this demo points at <code>/widget/embed-demo</code>, the placeholder build.</span>
+    </div>
+
+    <div class="p-group">
+      <span class="lbl">Org SSO secret</span>
+      <input id="p-secret" type="text" placeholder="Paste this org's SSO secret…" spellcheck="false" autocomplete="off">
+      <span class="p-hint">The real SDK-integration input. In production this lives in <b>your backend's</b> env and signs JWTs <b>there</b> — never in the browser. This demo signs client-side to <b>stand in for your backend</b>, so <code>getToken()</code> returns a freshly-signed JWT each call (no expiry to babysit). Generate one in FeedLog under <b>Developer → SSO</b>.</span>
+    </div>
+
+    <div class="p-group">
+      <span class="lbl">Demo controls</span>
+      <div class="p-row">
+        <select id="p-theme" aria-label="Widget theme">
+          <option value="auto">theme: auto</option>
+          <option value="light">theme: light</option>
+          <option value="dark">theme: dark</option>
+        </select>
+      </div>
+      <div class="p-row">
+        <button class="btn btn-ghost btn-sm" id="p-reload" type="button">Apply &amp; reload widget</button>
+      </div>
+      <div class="p-row">
+        <button class="btn btn-ghost btn-sm" id="p-signout" type="button">Sign out</button>
+        <button class="btn btn-ghost btn-sm" id="p-clear" type="button">Clear session</button>
+      </div>
+      <span class="p-hint">The SDK has no runtime <code>destroy</code> by design, so <b>baseUrl</b> / <b>theme</b> changes reload the page to rebuild the widget cleanly.</span>
+    </div>
+
+    <div class="p-group">
+      <span class="lbl">Status</span>
+      <div class="p-status">
+        <div class="row"><span class="k">Host sign-in</span><span class="val" id="s-auth">—</span></div>
+        <div class="row"><span class="k">baseUrl</span><span class="val" id="s-base">—</span></div>
+        <div class="row"><span class="k">SSO secret</span><span class="val" id="s-secret">—</span></div>
+        <div class="row"><span class="k">Widget</span><span class="val" id="s-widget">—</span></div>
+      </div>
+      <div class="p-log" id="p-log"></div>
+    </div>
+
+    <div class="callout" id="p-serve-note" style="display:none">
+      Open this file over <b>http</b> (not <code>file://</code>) to load the live widget — e.g. <code>python3 -m http.server</code> in this folder, then visit the printed URL. Over <code>file://</code> the browser reports a <code>null</code> origin, which breaks the widget's cross-origin handshake. The landing page, sign-in, and this panel work either way.
+    </div>
+  </div>
+</div>
+
+<!-- The SDK, inlined as a global IIFE by `npm run build:demo`. Keeps this a
+     single self-contained file. The published npm package stays ESM-only. -->
+<script>
+/* FEEDLOG_SDK_START */
+"use strict";var FeedLogWidget=(()=>{var b=Object.defineProperty;var O=Object.getOwnPropertyDescriptor;var I=Object.getOwnPropertyNames;var F=Object.prototype.hasOwnProperty;var B=(i,e)=>{for(var t in e)b(i,t,{get:e[t],enumerable:!0})},H=(i,e,t,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let n of I(e))!F.call(i,n)&&n!==t&&b(i,n,{get:()=>e[n],enumerable:!(r=O(e,n))||r.enumerable});return i};var N=i=>H(b({},"__esModule",{value:!0}),i);var Z={};B(Z,{createWidget:()=>Q});var d=class extends Error{constructor(){super("Unauthorized"),this.name="UnauthorizedError"}};async function S(i){let e=await fetch(`${i}/api/widget/config`,{method:"GET",credentials:"omit"});if(!e.ok)return null;let t=await e.json();return!t||typeof t!="object"?null:{enabled:t.enabled===!0,branding:{primary:t.branding?.primary||"#111827",primaryForeground:t.branding?.primaryForeground||"#FFFFFF"}}}async function C(i,e){let t=await fetch(`${i}/api/widget/auth/exchange`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"omit",body:JSON.stringify({jwt:e})});if(!t.ok)throw new Error(`Widget token exchange failed with status ${t.status}`);let r=await t.json();if(!r?.token)throw new Error("Widget token exchange returned no token");return r}async function x(i,e){let t=await fetch(`${i}/api/widget/unread`,{method:"GET",headers:{Authorization:`Bearer ${e}`},credentials:"omit"});if(t.status===401)throw new d;if(!t.ok)throw new Error(`Widget unread request failed with status ${t.status}`);let r=await t.json();return typeof r?.count=="number"&&r.count>0?Math.floor(r.count):0}function L(i){let e=i.split(".");if(e.length<2)return null;let t=e[1];if(!t)return null;try{let r=t.replace(/-/g,"+").replace(/_/g,"/"),n=r+"=".repeat((4-r.length%4)%4),o=atob(n),a=new Uint8Array(o.length);for(let h=0;h<o.length;h++)a[h]=o.charCodeAt(h);let v=JSON.parse(new TextDecoder().decode(a));if(!v||typeof v!="object")return null;let w=v.email;return typeof w!="string"||!w.includes("@")?null:w.trim().toLowerCase()}catch{return null}}function _(i){try{let e=window[i],t="__feedlog_probe__";return e.setItem(t,"1"),e.removeItem(t),e}catch{return null}}function E(i){let e=_(i);if(e)return{get:r=>{try{return e.getItem(r)}catch{return null}},set:(r,n)=>{try{e.setItem(r,n)}catch{}},remove:r=>{try{e.removeItem(r)}catch{}}};let t=new Map;return{get:r=>t.get(r)??null,set:(r,n)=>{t.set(r,n)},remove:r=>{t.delete(r)}}}var T=null,P=null;function u(){return T??(T=E("localStorage")),T}function s(){return P??(P=E("sessionStorage")),P}var q=300*1e3;function c(i){return`feedlog:widget:login-pending:${i}`}function M(i){s().set(c(i),String(Date.now()+q))}function U(i){s().remove(c(i))}function R(i){let e=s().get(c(i));if(!e)return!1;s().remove(c(i));let t=Number(e);return Number.isFinite(t)&&t>Date.now()}var g=class{constructor(e,t,r,n){this.baseUrl=e;this.origin=t;this.auth=r;this.cache=n;this.inflight=null;this.queue=Promise.resolve()}resolve(e={}){let t={allowLogin:e.allowLogin===!0,ignoreCache:e.ignoreCache===!0},r=this.inflight;if(r&&D(r.options,t))return r.promise;let n=this.queue.then(()=>this.run(t)),o={options:t,promise:n};return this.inflight=o,this.queue=n.then(p,p),n.then(p,p).then(()=>{this.inflight===o&&(this.inflight=null)}),n}getCustomerJwt(){return Promise.resolve().then(()=>this.auth.getToken())}async run(e){let t=await this.auth.getToken();if(!t&&e.allowLogin&&this.auth.login){M(this.origin);try{await this.auth.login()}catch{}U(this.origin),t=await this.auth.getToken()}if(!t)return this.cache.clear(),null;let r=L(t);if(r&&!e.ignoreCache){let a=this.cache.readFor(r);if(a)return a}e.ignoreCache&&this.cache.clear();let n=await C(this.baseUrl,t),o={email:r??n.user?.email??"",token:n.token,expiresAt:n.expiresAt};return r&&this.cache.write(o),o}};function D(i,e){return(i.allowLogin||!e.allowLogin)&&(i.ignoreCache||!e.ignoreCache)}function p(){}var j=6e4,f=class{constructor(e){this.key=`feedlog:widget:session:${e}`}read(){let e=u().get(this.key);if(!e)return null;try{let t=JSON.parse(e);if(typeof t?.email!="string"||typeof t.token!="string"||typeof t.expiresAt!="string")return null;let r={email:t.email,token:t.token,expiresAt:t.expiresAt};return $(r)?(this.clear(),null):r}catch{return this.clear(),null}}readFor(e){let t=this.read();return t?t.email!==e?(this.clear(),null):t:null}write(e){u().set(this.key,JSON.stringify(e))}clear(){u().remove(this.key)}};function $(i){let e=Date.parse(i.expiresAt);return Number.isNaN(e)?!0:e-j<=Date.now()}var K="feedlog-widget",J=`
+:host { all: initial; }
+* { box-sizing: border-box; }
+
+.root {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483000;
+  font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: light;
+  --surface: #ffffff;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+}
+.root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #16181d;
+  --ink: #e5e7eb;
+  --muted: #9ca3af;
+  --line: #2b2f38;
+}
+
+.launcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .22);
+  transition: transform .15s ease, opacity .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.launcher:hover { opacity: .9; }
+.launcher:active { transform: scale(.95); }
+.launcher:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.launcher svg { width: 26px; height: 26px; display: block; }
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  /* Notification red, never the brand color \u2014 an unread count reads as an alert. */
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.badge[hidden] { display: none; }
+
+.panel {
+  position: absolute;
+  right: 0;
+  bottom: 72px;
+  display: flex;
+  width: 400px;
+  height: min(680px, calc(100vh - 120px));
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, .24);
+  animation: feedlog-in .16s ease-out;
+}
+.panel[hidden] { display: none; }
+@keyframes feedlog-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: transparent;
+}
+iframe[hidden] { display: none; }
+
+.state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background: var(--surface);
+  color: var(--ink);
+}
+.state[hidden] { display: none; }
+.state p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: feedlog-spin .8s linear infinite;
+}
+@keyframes feedlog-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .panel { animation: none; }
+}
+
+.retry {
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.retry:hover { opacity: .9; }
+
+@media (max-width: 520px) {
+  .root { right: 12px; bottom: 12px; }
+  .panel {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+}
+`,z='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',m=class{constructor(e,t){this.iframe=null;this.retryHandler=null;this.host=document.createElement("div"),this.host.id=K;let r=this.host.attachShadow({mode:"open"}),n=document.createElement("style");n.textContent=J,r.appendChild(n),this.root=l("div","root"),this.root.style.setProperty("--primary",e.primary),this.root.style.setProperty("--primary-foreground",e.primaryForeground),V(this.root,t),this.panel=l("div","panel"),this.panel.hidden=!0,this.panel.setAttribute("role","dialog"),this.panel.setAttribute("aria-label","Feedback"),this.state=l("div","state"),this.spinner=l("div","spinner"),this.stateText=document.createElement("p"),this.retryButton=l("button","retry"),this.retryButton.type="button",this.retryButton.textContent="Try again",this.retryButton.hidden=!0,this.retryButton.addEventListener("click",()=>this.retryHandler?.()),this.state.append(this.spinner,this.stateText,this.retryButton),this.panel.appendChild(this.state),this.launcher=l("button","launcher"),this.launcher.type="button",this.launcher.setAttribute("aria-label","Feedback"),this.launcher.setAttribute("aria-expanded","false"),this.launcher.innerHTML=z,this.badge=l("span","badge"),this.badge.hidden=!0,this.badge.setAttribute("aria-live","polite"),this.launcher.appendChild(this.badge),this.root.append(this.panel,this.launcher),r.appendChild(this.root)}mount(){document.body.appendChild(this.host)}onLauncherClick(e){this.launcher.addEventListener("click",e)}get isOpen(){return!this.panel.hidden}openPanel(){this.panel.hidden=!1,this.launcher.setAttribute("aria-expanded","true")}closePanel(){this.panel.hidden=!0,this.launcher.setAttribute("aria-expanded","false")}setBadge(e){if(e<=0){this.badge.hidden=!0;return}this.badge.textContent=e>9?"9+":String(e),this.badge.hidden=!1}showLoading(){this.retryHandler=null,this.spinner.hidden=!1,this.stateText.textContent="",this.retryButton.hidden=!0,this.state.hidden=!1,this.iframe&&(this.iframe.hidden=!0)}showError(e,t){this.retryHandler=t,this.spinner.hidden=!0,this.stateText.textContent=e,this.retryButton.hidden=!1,this.state.hidden=!1,this.iframe&&(this.iframe.hidden=!0)}showContent(){this.retryHandler=null,this.state.hidden=!0,this.iframe&&(this.iframe.hidden=!1)}setIframe(e){this.removeIframe();let t=document.createElement("iframe");t.title="Feedback",t.hidden=!0,t.setAttribute("allow","clipboard-write"),t.src=e,this.panel.appendChild(t),this.iframe=t}removeIframe(){this.iframe?.remove(),this.iframe=null}get frameWindow(){return this.iframe?.contentWindow??null}get hasIframe(){return this.iframe!==null}};function l(i,e){let t=document.createElement(i);return t.className=e,t}function V(i,e){if(e!=="auto"){i.dataset.theme=e;return}let t=window.matchMedia("(prefers-color-scheme: dark)"),r=()=>{i.dataset.theme=t.matches?"dark":"light"};r(),t.addEventListener("change",r)}var Y=6e4,y=class{constructor(e,t,r,n){this.baseUrl=e;this.auth=r;this.onCount=n;this.live=!1;this.pending=null;this.key=`feedlog:widget:unread:${t}`}takeOver(){this.live=!0}releaseOwnership(){this.live=!1}push(e){let t=Number.isFinite(e)&&e>0?Math.floor(e):0;this.write(t),this.onCount(t)}start(){let e=this.read();e&&this.onCount(e.count),this.refresh(),document.addEventListener("visibilitychange",()=>{document.visibilityState==="visible"&&this.refresh()})}refresh(){if(this.live)return Promise.resolve();let e=this.read();return e&&Date.now()-e.at<Y?Promise.resolve():(this.pending??(this.pending=this.load().finally(()=>{this.pending=null})),this.pending)}async load(){try{let e=await this.auth.resolve();if(!e){this.clear(),this.onCount(0);return}let t;try{t=await x(this.baseUrl,e.token)}catch(r){if(!(r instanceof d))throw r;let n=await this.auth.resolve({ignoreCache:!0});if(!n){this.clear(),this.onCount(0);return}t=await x(this.baseUrl,n.token)}this.write(t),this.onCount(t)}catch{}}read(){let e=s().get(this.key);if(!e)return null;try{let t=JSON.parse(e);return typeof t?.count!="number"||typeof t.at!="number"?null:{count:t.count,at:t.at}}catch{return null}}write(e){s().set(this.key,JSON.stringify({count:e,at:Date.now()}))}clear(){s().remove(this.key)}};var G="Feedback could not be loaded.";async function A(i){let e;try{e=await S(i.baseUrl)}catch{e=null}if(!e){console.warn("[feedlog/widget] could not load widget config; nothing was rendered");return}e.enabled&&(await X(),new k(i,new m(e.branding,i.theme)).start())}var k=class{constructor(e,t){this.options=e;this.ui=t;this.frameToken=null;this.onMessage=e=>{if(e.origin!==this.options.origin)return;let t=this.ui.frameWindow;if(!t||e.source!==t)return;let r=e.data;if(!r||typeof r!="object")return;let n=r;if(!(n.v!==1||typeof n.type!="string"))switch(n.type){case"ready":this.ui.showContent();return;case"auth-requested":this.handleAuthRequest(n.payload?.reason);return;case"unread":this.unread.push(Number(n.payload?.count));return;case"navigate":this.handleNavigate(n.payload);return;case"close-request":this.ui.closePanel();return;default:}};let r=new f(e.origin);this.auth=new g(e.baseUrl,e.origin,e.auth,r),this.unread=new y(e.baseUrl,e.origin,this.auth,n=>this.ui.setBadge(n))}start(){this.ui.mount(),this.ui.onLauncherClick(()=>this.toggle()),window.addEventListener("message",this.onMessage),this.unread.start(),R(this.options.origin)&&this.open()}toggle(){if(this.ui.isOpen){this.ui.closePanel();return}this.open()}async open(){this.ui.openPanel(),this.ui.hasIframe||this.ui.showLoading(),await this.sync({})}async sync(e,t){try{let r=await this.auth.resolve(e);r&&t&&r.token===t&&(r=await this.auth.resolve({...e,ignoreCache:!0}));let n=r?.token??null;(!this.ui.hasIframe||n!==this.frameToken)&&this.mountFrame(n)}catch{this.ui.hasIframe||this.ui.showError(G,()=>this.retry())}}retry(){this.ui.showLoading(),this.sync({})}mountFrame(e){this.frameToken=e,this.ui.showLoading(),this.unread.takeOver(),e||this.unread.push(0);let t=new URL(this.options.embedPath,this.options.baseUrl);t.searchParams.set("theme",this.options.theme),t.searchParams.set("origin",window.location.origin);let r=e?`${t.toString()}#token=${encodeURIComponent(e)}`:t.toString();this.ui.setIframe(r)}handleAuthRequest(e){return this.sync({allowLogin:e==="user",ignoreCache:e==="expired"},this.frameToken)}async handleNavigate(e){let t=e?.slug;if(e?.to!=="feedback"||typeof t!="string"||!t)return;let r=`/p/${encodeURIComponent(t)}`,n=new URL(r,this.options.baseUrl).toString();try{let o=await this.auth.getCustomerJwt();if(o){let a=new URL("/api/sso/jwt",this.options.baseUrl);a.searchParams.set("jwt",o),a.searchParams.set("return_to",r),n=a.toString()}}catch{}window.open(n,"_blank","noopener")}};function X(){return document.body?Promise.resolve():new Promise(i=>{document.addEventListener("DOMContentLoaded",()=>i(),{once:!0})})}var W=!1;function Q(i){if(typeof window>"u"||typeof document>"u")return;if(W){console.warn("[feedlog/widget] createWidget() was already called; ignoring this call");return}if(!i?.baseUrl||typeof i.baseUrl!="string")throw new TypeError("[feedlog/widget] createWidget requires a baseUrl");if(typeof i.auth?.getToken!="function")throw new TypeError("[feedlog/widget] createWidget requires auth.getToken");let e=i.baseUrl.replace(/\/+$/,""),t;try{t=new URL(e).origin}catch{throw new TypeError(`[feedlog/widget] baseUrl is not a valid URL: ${i.baseUrl}`)}let r=i.embedPath??"/widget/embed",n=typeof r=="string"&&r.startsWith("/")&&!r.startsWith("//")?r:"/widget/embed";W=!0,A({baseUrl:e,origin:t,auth:i.auth,theme:i.theme??"auto",embedPath:n})}return N(Z);})();
+/* FEEDLOG_SDK_END */
+</script>
+
+<!-- Demo host logic: theme, mock auth, control panel, and the SDK wiring. -->
+<script>
+(function () {
+  'use strict'
+  var $ = function (id) { return document.getElementById(id) }
+  var STORE_KEY = 'paceboard:demo'
+  var isFile = location.protocol === 'file:'
+
+  var state = Object.assign(
+    { baseUrl: 'http://localhost:3000', embedPath: '/widget/embed-demo', secret: '', theme: 'auto', loggedIn: false, email: '' },
+    load()
+  )
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') } catch (e) { return {} }
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)) } catch (e) {}
+  }
+
+  // ---- theme (page follows the panel's choice; auto = system) --------------
+  var media = window.matchMedia('(prefers-color-scheme: dark)')
+  function applyTheme() {
+    var root = document.documentElement
+    if (state.theme === 'auto') root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', state.theme)
+  }
+  media.addEventListener('change', function () { if (state.theme === 'auto') applyTheme() })
+  applyTheme()
+
+  // ---- log -----------------------------------------------------------------
+  var logEl = $('p-log')
+  function log(msg) {
+    var t = new Date().toTimeString().slice(0, 8)
+    logEl.textContent = (t + '  ' + msg + '\n' + logEl.textContent).slice(0, 2000)
+  }
+
+  // ---- nav (signed-out vs signed-in) --------------------------------------
+  function initials(email) { return (email || '?').slice(0, 2).toUpperCase() }
+  function renderNav() {
+    var el = $('nav-right')
+    el.innerHTML = ''
+    if (state.loggedIn) {
+      var chip = document.createElement('div')
+      chip.className = 'user-chip'
+      chip.innerHTML = '<span class="avatar">' + initials(state.email) + '</span><span class="email">' + escapeHtml(state.email) + '</span>'
+      var out = document.createElement('button')
+      out.className = 'btn btn-ghost btn-sm'
+      out.textContent = 'Sign out'
+      out.onclick = signOut
+      el.appendChild(chip)
+      el.appendChild(out)
+    } else {
+      var signin = document.createElement('button')
+      signin.className = 'btn btn-ghost btn-sm'
+      signin.textContent = 'Sign in'
+      signin.onclick = function () { openLogin() }
+      var start = document.createElement('button')
+      start.className = 'btn btn-primary btn-sm'
+      start.textContent = 'Start free'
+      start.onclick = function () { openLogin() }
+      el.appendChild(signin)
+      el.appendChild(start)
+    }
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    })
+  }
+
+  // ---- mock login modal ----------------------------------------------------
+  // openLogin() resolves when the modal closes — success is judged afterwards
+  // by getToken(), exactly as a real host's auth.login would behave.
+  var modal = $('modal')
+  var pendingResolve = null
+  function openLogin() {
+    modal.classList.add('open')
+    $('m-email').focus()
+    return new Promise(function (resolve) { pendingResolve = resolve })
+  }
+  function closeLogin(didSignIn) {
+    modal.classList.remove('open')
+    if (didSignIn) {
+      state.loggedIn = true
+      state.email = $('m-email').value.trim() || 'alex@paceboard.example'
+      save(); renderNav(); refreshStatus()
+      log('signed in as ' + state.email)
+    }
+    var r = pendingResolve; pendingResolve = null
+    if (r) r()
+  }
+  $('m-submit').onclick = function () { closeLogin(true) }
+  $('m-cancel').onclick = function () { closeLogin(false) }
+  modal.addEventListener('click', function (e) { if (e.target === modal) closeLogin(false) })
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal.classList.contains('open')) closeLogin(false) })
+
+  function signOut() {
+    state.loggedIn = false; state.email = ''
+    save(); renderNav(); refreshStatus()
+    log('signed out (getToken will now return null)')
+  }
+
+  // ---- landing CTAs open the same host login -------------------------------
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cta]'), function (btn) {
+    btn.addEventListener('click', function () {
+      if (state.loggedIn) { flashPanel() } else { openLogin() }
+    })
+  })
+
+  // ---- control panel: open / close / drag ----------------------------------
+  var fab = $('panel-fab'), panel = $('panel'), head = $('panel-head')
+  function openPanel() { panel.classList.add('open'); fab.style.display = 'none' }
+  function closePanel() { panel.classList.remove('open'); fab.style.display = '' }
+  fab.onclick = openPanel
+  $('panel-close').onclick = closePanel
+  function flashPanel() { openPanel() }
+
+  // Restore a dragged position if one was saved.
+  if (state.panelPos) placePanel(state.panelPos.left, state.panelPos.top)
+  function placePanel(left, top) {
+    var w = panel.offsetWidth || 340, h = panel.offsetHeight || 400
+    left = Math.max(8, Math.min(left, window.innerWidth - w - 8))
+    top = Math.max(8, Math.min(top, window.innerHeight - h - 8))
+    panel.style.left = left + 'px'
+    panel.style.top = top + 'px'
+    panel.style.bottom = 'auto'
+  }
+  var drag = null
+  head.addEventListener('pointerdown', function (e) {
+    if (e.target.closest('.x')) return
+    var r = panel.getBoundingClientRect()
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top }
+    head.classList.add('dragging')
+    head.setPointerCapture(e.pointerId)
+  })
+  head.addEventListener('pointermove', function (e) {
+    if (!drag) return
+    placePanel(e.clientX - drag.dx, e.clientY - drag.dy)
+  })
+  head.addEventListener('pointerup', function (e) {
+    if (!drag) return
+    drag = null
+    head.classList.remove('dragging')
+    var r = panel.getBoundingClientRect()
+    state.panelPos = { left: r.left, top: r.top }; save()
+  })
+
+  // ---- panel inputs --------------------------------------------------------
+  var baseInput = $('p-baseurl'), embedInput = $('p-embed'), secretInput = $('p-secret'), themeSel = $('p-theme')
+  baseInput.value = state.baseUrl
+  embedInput.value = state.embedPath
+  secretInput.value = state.secret
+  themeSel.value = state.theme
+  baseInput.addEventListener('input', function () { state.baseUrl = baseInput.value.trim(); save(); refreshStatus() })
+  embedInput.addEventListener('input', function () { state.embedPath = embedInput.value.trim() || '/widget/embed'; save() })
+  secretInput.addEventListener('input', function () { state.secret = secretInput.value.trim(); save(); refreshStatus() })
+  themeSel.addEventListener('change', function () {
+    state.theme = themeSel.value; save(); applyTheme(); refreshStatus()
+    log('theme → ' + state.theme + ' (reload to apply to the widget)')
+  })
+  $('p-reload').onclick = function () { save(); log('reloading to rebuild widget…'); setTimeout(function () { location.reload() }, 120) }
+  $('p-signout').onclick = signOut
+  $('p-clear').onclick = function () {
+    // Clears the session (who's signed in), not the secret — the secret is
+    // integration config, like baseUrl, and re-pasting it every time is the
+    // friction we're removing.
+    state.loggedIn = false; state.email = ''
+    save(); renderNav(); refreshStatus()
+    log('session cleared (secret kept; getToken now returns null)')
+    // The widget also caches its session token per-email; clearing it here keeps
+    // the demo's "signed out" honest without a reload.
+    try {
+      Object.keys(localStorage).forEach(function (k) { if (k.indexOf('feedlog:') === 0) localStorage.removeItem(k) })
+      Object.keys(sessionStorage).forEach(function (k) { if (k.indexOf('feedlog:') === 0) sessionStorage.removeItem(k) })
+    } catch (e) {}
+  }
+
+  // ---- status --------------------------------------------------------------
+  function set(id, text, cls) {
+    var el = $(id); el.textContent = text
+    el.className = 'val' + (cls ? ' ' + cls : '')
+  }
+  function refreshStatus() {
+    set('s-auth', state.loggedIn ? 'signed in' : 'signed out', state.loggedIn ? 'ok' : 'no')
+    set('s-base', state.baseUrl || '(none)')
+    set('s-secret', state.secret ? 'present' : 'none', state.secret ? 'ok' : 'warn')
+  }
+
+  // ---- customer-backend simulation: HS256 JWT signing ----------------------
+  // In production this runs on YOUR server with the org SSO secret — never in
+  // the browser. It lives here only so the demo needs no backend of its own.
+  function b64url(bytes) {
+    var bin = ''
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  function b64urlStr(str) { return b64url(new TextEncoder().encode(str)) }
+  async function signJwt(secret, claims) {
+    var data = b64urlStr(JSON.stringify({ alg: 'HS256', typ: 'JWT' })) + '.' + b64urlStr(JSON.stringify(claims))
+    var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    var sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data))
+    return data + '.' + b64url(new Uint8Array(sig))
+  }
+
+  // ---- SDK wiring ----------------------------------------------------------
+  // getToken() signs a fresh short-lived JWT each call, exactly as a real
+  // customer backend would — so a persisted secret never goes stale.
+  async function getToken() {
+    if (!state.loggedIn || !state.secret) {
+      log('getToken() → null (not signed in, or no secret set)')
+      return null
+    }
+    try {
+      var token = await signJwt(state.secret, {
+        email: state.email,
+        name: state.email.split('@')[0] || 'Demo User',
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      })
+      log('getToken() → freshly signed JWT for ' + state.email)
+      return token
+    } catch (e) {
+      log('getToken() → signing failed: ' + e.message)
+      return null
+    }
+  }
+  function login() {
+    log('auth.login() → opening host sign-in')
+    return openLogin().then(function () { log('sign-in closed (loggedIn=' + state.loggedIn + ')') })
+  }
+
+  function mountWidget() {
+    if (isFile) {
+      set('s-widget', 'needs http', 'warn')
+      $('p-serve-note').style.display = ''
+      log('file:// detected — widget skipped, serve over http to load it')
+      return
+    }
+    try {
+      window.FeedLogWidget.createWidget({
+        baseUrl: state.baseUrl,
+        auth: { getToken: getToken, login: login },
+        theme: state.theme,
+        embedPath: state.embedPath,
+      })
+      log('createWidget({ baseUrl: ' + state.baseUrl + ', embedPath: ' + state.embedPath + ', theme: ' + state.theme + ' })')
+    } catch (e) {
+      set('s-widget', 'error', 'no')
+      log('createWidget threw: ' + e.message)
+      return
+    }
+    // The SDK exposes no mount callback, so poll for its root to reflect status.
+    var tries = 0
+    var timer = setInterval(function () {
+      tries++
+      if (document.getElementById('feedlog-widget')) {
+        set('s-widget', 'live', 'ok'); clearInterval(timer)
+      } else if (tries > 10) {
+        set('s-widget', 'not loaded', 'warn')
+        log('widget not mounted — is FeedLog running at ' + state.baseUrl + '?')
+        clearInterval(timer)
+      }
+    }, 400)
+  }
+
+  // ---- boot ----------------------------------------------------------------
+  renderNav()
+  refreshStatus()
+  set('s-widget', 'starting…')
+  if (isFile) $('p-serve-note').style.display = ''
+  mountWidget()
+})()
+</script>
+</body>
+</html>
