@@ -10,9 +10,9 @@ interface CacheEntry {
 }
 
 /**
- * Keeps the launcher badge in sync while no iframe is mounted. Once the iframe
- * is alive it becomes the authoritative source (it can zero the count the moment
- * the user reads a thread), so this stops fetching entirely.
+ * Keeps the launcher badge in sync until the panel is first opened. From then on
+ * the iframe is the authoritative source (it can zero the count the moment the
+ * user reads a thread), so this stops fetching entirely.
  */
 export class UnreadTracker {
   private readonly key: string
@@ -28,7 +28,7 @@ export class UnreadTracker {
     this.key = `feedlog:widget:unread:${origin}`
   }
 
-  /** Hands ownership of the count to the iframe. */
+  /** Hands ownership of the count to the open frame. */
   takeOver(): void {
     this.live = true
   }

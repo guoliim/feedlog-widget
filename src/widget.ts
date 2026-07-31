@@ -16,6 +16,12 @@ export interface BootOptions {
 }
 
 const LOAD_ERROR = 'Feedback could not be loaded.'
+const PREWARM_TIMEOUT_MS = 3000
+const PREWARM_DELAY_MS = 2500
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: { saveData?: boolean }
+}
 
 export async function boot(options: BootOptions): Promise<void> {
   let config
@@ -57,6 +63,22 @@ class Widget {
     // A redirect-style `login()` navigated the page away mid-flow; the leftover
     // marker is the only trace that the user was on their way into the widget.
     if (consumeLoginPending(this.options.origin)) void this.open()
+    this.prewarm()
+  }
+
+  /**
+   * The frame mounts inside the closed panel, which hides it without stopping
+   * it loading, so the first click becomes a display flip.
+   */
+  private prewarm(): void {
+    if ((navigator as NavigatorWithConnection).connection?.saveData) return
+
+    const run = (): void => {
+      if (this.ui.hasIframe) return
+      void this.sync({})
+    }
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: PREWARM_TIMEOUT_MS })
+    else setTimeout(run, PREWARM_DELAY_MS)
   }
 
   private toggle(): void {
@@ -69,6 +91,9 @@ class Widget {
 
   private async open(): Promise<void> {
     this.ui.openPanel()
+    // Ownership follows the opened panel, not the mounted frame: a prewarmed
+    // frame may be signed out, and a signed-out frame refreshes nothing.
+    this.unread.takeOver()
     if (!this.ui.hasIframe) this.ui.showLoading()
     // Re-resolving on every open is what keeps the widget aligned with the host's
     // sign-in state; the session cache keeps it from costing a round trip.
@@ -109,9 +134,6 @@ class Widget {
   private mountFrame(token: string | null): void {
     this.frameToken = token
     this.ui.showLoading()
-    // From here the iframe owns the count — it can zero it the instant the user
-    // reads a thread, which no polling interval could match.
-    this.unread.takeOver()
     if (!token) this.unread.push(0)
 
     const url = new URL(this.options.embedPath, this.options.baseUrl)
