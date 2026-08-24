@@ -29,7 +29,7 @@ export class AuthManager {
   constructor(
     private readonly baseUrl: string,
     private readonly origin: string,
-    private readonly auth: WidgetAuth,
+    private readonly auth: WidgetAuth | undefined,
     private readonly cache: SessionCache,
   ) {}
 
@@ -56,24 +56,35 @@ export class AuthManager {
 
   /** A fresh customer JWT for the pop-out handoff; deliberately outside the session flow. */
   getCustomerJwt(): Promise<string | null> {
-    return Promise.resolve().then(() => this.auth.getToken())
+    const auth = this.auth
+    if (!auth) return Promise.resolve(null)
+    return Promise.resolve().then(() => auth.getToken())
   }
 
   private async run(options: Required<ResolveOptions>): Promise<Session | null> {
-    let jwt = await this.auth.getToken()
+    const auth = this.auth
+    // No host integration: the product has no user system, or chose not to wire
+    // one up. There is no identity to resolve here — the embed page mints its own
+    // guest when the visitor writes.
+    if (!auth) {
+      this.cache.clear()
+      return null
+    }
 
-    if (!jwt && options.allowLogin && this.auth.login) {
+    let jwt = await auth.getToken()
+
+    if (!jwt && options.allowLogin && auth.login) {
       // Written before the call because a redirect-style login never returns
       // here — the marker is what lets the reloaded page reopen the panel.
       markLoginPending(this.origin)
       try {
-        await this.auth.login()
+        await auth.login()
       }
       catch {
         // The host's login UI failing is not decisive; getToken() below rules.
       }
       clearLoginPending(this.origin)
-      jwt = await this.auth.getToken()
+      jwt = await auth.getToken()
     }
 
     if (!jwt) {

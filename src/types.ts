@@ -18,7 +18,13 @@ export type WidgetTheme = 'light' | 'dark' | 'auto'
 export interface WidgetOptions {
   /** FeedLog org address, e.g. `https://acme.feedlog.ai`. */
   baseUrl: string
-  auth: WidgetAuth
+  /**
+   * How the host tells FeedLog who the visitor is. Optional: leave it out and
+   * the widget runs without a host identity, which works when the org allows
+   * guest posting — the embed page mints its own guest on the first message.
+   * Products with no user system of their own can integrate with baseUrl alone.
+   */
+  auth?: WidgetAuth
   /** Passed to the embed page as a query param so the first paint is not mis-themed. */
   theme?: WidgetTheme
   /**

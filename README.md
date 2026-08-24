@@ -36,12 +36,23 @@ createWidget({
 
 That is the entire integration. `createWidget` is the only export: no return value, no instance methods, no events. The launcher opens the panel; the panel's own close button closes it.
 
+### Without a user system
+
+`auth` is optional. Leave it out and the widget runs with no host identity:
+
+```ts
+createWidget({ baseUrl: 'https://acme.feedlog.ai' })
+```
+
+This works when the org has **Guest posting** switched on (FeedLog → Settings → Guest actions). Visitors write feedback without signing in; the embed page mints its own guest identity on the first message, and if that person later signs in to FeedLog, everything they filed as a guest moves onto their account. With guest posting off and no `auth`, the panel only ever shows a sign-in prompt it has no way to satisfy.
+
 ### Options
 
 | Option | Required | Description |
 | --- | --- | --- |
 | `baseUrl` | yes | Your FeedLog org address, e.g. `https://acme.feedlog.ai`. |
-| `auth.getToken` | yes | `() => Promise<string \| null>`. Return a JWT when signed in, `null` when signed out, or throw for a temporary failure. A thrown error surfaces a retryable error state — it is **not** treated as signed out. |
+| `auth` | no | How your product tells FeedLog who the visitor is. Omit it to run guest-only (see above). |
+| `auth.getToken` | with `auth` | `() => Promise<string \| null>`. Return a JWT when signed in, `null` when signed out, or throw for a temporary failure. A thrown error surfaces a retryable error state — it is **not** treated as signed out. |
 | `auth.login` | no | `() => void \| Promise<void>`. Opens your own sign-in UI. Settling only means the interaction ended; whether it succeeded is judged by the next `getToken()`. Both popup and redirect styles work. |
 | `theme` | no | `'light' \| 'dark' \| 'auto'`. Defaults to `'auto'` (follows the OS). Passed to the iframe up front so the first paint is not mis-themed. |
 

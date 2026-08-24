@@ -10,9 +10,9 @@ interface CacheEntry {
 }
 
 /**
- * Keeps the launcher badge in sync until the panel is first opened. From then on
- * the iframe is the authoritative source (it can zero the count the moment the
- * user reads a thread), so this stops fetching entirely.
+ * Keeps the launcher badge in sync until the iframe is mounted. From then on the
+ * iframe is the authoritative source (it can zero the count the moment the user
+ * reads a thread), so this stops fetching entirely.
  */
 export class UnreadTracker {
   private readonly key: string
@@ -24,6 +24,13 @@ export class UnreadTracker {
     origin: string,
     private readonly auth: AuthManager,
     private readonly onCount: (count: number) => void,
+    /**
+     * False when the host wired up no `auth` at all. The only identity is then
+     * the guest one the frame mints for itself, which lives in the frame's own
+     * storage and cannot be read from here — so the frame is the sole source of
+     * a count and this tracker must not overwrite what it last reported.
+     */
+    private readonly hasHostAuth: boolean,
   ) {
     this.key = `feedlog:widget:unread:${origin}`
   }
@@ -56,7 +63,7 @@ export class UnreadTracker {
   }
 
   refresh(): Promise<void> {
-    if (this.live) return Promise.resolve()
+    if (this.live || !this.hasHostAuth) return Promise.resolve()
     const cached = this.read()
     if (cached && Date.now() - cached.at < TTL_MS) return Promise.resolve()
     this.pending ??= this.load().finally(() => {

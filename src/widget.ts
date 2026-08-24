@@ -9,7 +9,7 @@ import { UnreadTracker } from './unread'
 export interface BootOptions {
   baseUrl: string
   origin: string
-  auth: WidgetAuth
+  auth?: WidgetAuth
   theme: WidgetTheme
   /** Same-origin path of the hosted embed page; defaults resolved in index.ts. */
   embedPath: string
@@ -52,7 +52,13 @@ class Widget {
   constructor(private readonly options: BootOptions, private readonly ui: WidgetUi) {
     const cache = new SessionCache(options.origin)
     this.auth = new AuthManager(options.baseUrl, options.origin, options.auth, cache)
-    this.unread = new UnreadTracker(options.baseUrl, options.origin, this.auth, count => this.ui.setBadge(count))
+    this.unread = new UnreadTracker(
+      options.baseUrl,
+      options.origin,
+      this.auth,
+      count => this.ui.setBadge(count),
+      !!options.auth,
+    )
   }
 
   start(): void {
@@ -91,9 +97,6 @@ class Widget {
 
   private async open(): Promise<void> {
     this.ui.openPanel()
-    // Ownership follows the opened panel, not the mounted frame: a prewarmed
-    // frame may be signed out, and a signed-out frame refreshes nothing.
-    this.unread.takeOver()
     if (!this.ui.hasIframe) this.ui.showLoading()
     // Re-resolving on every open is what keeps the widget aligned with the host's
     // sign-in state; the session cache keeps it from costing a round trip.
@@ -134,6 +137,12 @@ class Widget {
   private mountFrame(token: string | null): void {
     this.frameToken = token
     this.ui.showLoading()
+    // Ownership follows the mounted frame, not the opened panel. A frame built
+    // without a host token is not necessarily a signed-out frame any more — it
+    // may be running as a guest, in which case it has a real count to report and
+    // this tracker, which knows nothing about guests, would only overwrite it
+    // with zero on the next visibility change.
+    this.unread.takeOver()
     if (!token) this.unread.push(0)
 
     const url = new URL(this.options.embedPath, this.options.baseUrl)

@@ -23,8 +23,10 @@ export function createWidget(options: WidgetOptions): void {
   if (!options?.baseUrl || typeof options.baseUrl !== 'string') {
     throw new TypeError('[feedlog/widget] createWidget requires a baseUrl')
   }
-  if (typeof options.auth?.getToken !== 'function') {
-    throw new TypeError('[feedlog/widget] createWidget requires auth.getToken')
+  // Absent is fine — the widget then runs guest-only. Present but malformed is
+  // not: that is a wiring mistake worth failing loudly on.
+  if (options.auth !== undefined && typeof options.auth?.getToken !== 'function') {
+    throw new TypeError('[feedlog/widget] auth.getToken must be a function')
   }
 
   const baseUrl = options.baseUrl.replace(/\/+$/, '')
