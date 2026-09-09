@@ -24,7 +24,7 @@ interface NavigatorWithConnection extends Navigator {
   connection?: { saveData?: boolean }
 }
 
-export async function boot(options: BootOptions): Promise<void> {
+export async function boot(options: BootOptions): Promise<Widget | null> {
   let config
   try {
     config = await fetchConfig(options.baseUrl)
@@ -36,15 +36,17 @@ export async function boot(options: BootOptions): Promise<void> {
   // its backend is worse than no launcher at all.
   if (!config) {
     console.warn('[feedlog/widget] could not load widget config; nothing was rendered')
-    return
+    return null
   }
-  if (!config.enabled) return
+  if (!config.enabled) return null
 
   await domReady()
-  new Widget(options, new WidgetUi(config.branding, options.theme, config.launcher)).start()
+  const widget = new Widget(options, new WidgetUi(config.branding, options.theme, config.launcher))
+  widget.start()
+  return widget
 }
 
-class Widget {
+export class Widget {
   private readonly auth: AuthManager
   private readonly unread: UnreadTracker
   /** The token the mounted iframe was built with — `null` means a signed-out frame. */
@@ -97,7 +99,14 @@ class Widget {
     void this.open()
   }
 
-  private async open(): Promise<void> {
+  close(): void {
+    this.ui.closePanel()
+  }
+
+  async open(): Promise<void> {
+    // An explicit host command outranks the yield: they asked for the panel
+    // while their own sign-in is up, so give it to them.
+    this.reveal()
     this.ui.openPanel()
     if (!this.ui.hasIframe) this.ui.showLoading()
     // Re-resolving on every open is what keeps the widget aligned with the host's
