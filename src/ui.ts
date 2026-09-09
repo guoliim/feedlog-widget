@@ -1,6 +1,8 @@
 import type { WidgetTheme } from './types'
 
 const HOST_ID = 'feedlog-widget'
+/** Must outlast the `.root[data-yield]` transitions below. */
+const YIELD_MS = 340
 
 const STYLES = `
 :host { all: initial; }
@@ -18,6 +20,8 @@ const STYLES = `
   --muted: #6b7280;
   --line: #e5e7eb;
 }
+.root[data-yield] .panel { transform: translateY(100%); }
+.root[data-yield] .launcher { transform: translateY(96px); transition-delay: .1s; }
 .root[data-theme="dark"] {
   color-scheme: dark;
   --surface: #16181d;
@@ -78,6 +82,7 @@ const STYLES = `
   border-radius: 16px;
   background: var(--surface);
   box-shadow: 0 12px 48px rgba(0, 0, 0, .24);
+  transition: transform .22s cubic-bezier(.4, 0, 1, 1);
   animation: feedlog-in .16s ease-out;
 }
 .panel[hidden] { display: none; }
@@ -124,6 +129,7 @@ iframe[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 2.4s; }
   .panel { animation: none; }
+  .root .panel, .root .launcher { transition: none; }
 }
 
 .retry {
@@ -175,6 +181,7 @@ export class WidgetUi {
   private readonly retryButton: HTMLButtonElement
   private iframe: HTMLIFrameElement | null = null
   private retryHandler: (() => void) | null = null
+  private yieldTimer: ReturnType<typeof setTimeout> | undefined
 
   constructor(branding: Branding, theme: WidgetTheme) {
     this.host = document.createElement('div')
@@ -222,6 +229,19 @@ export class WidgetUi {
 
   mount(): void {
     document.body.appendChild(this.host)
+  }
+
+  setHidden(hidden: boolean): void {
+    clearTimeout(this.yieldTimer)
+    if (!hidden) {
+      this.host.style.display = ''
+      // Without this read both writes land in the same frame and it jumps.
+      void this.root.offsetWidth
+      delete this.root.dataset.yield
+      return
+    }
+    this.root.dataset.yield = ''
+    this.yieldTimer = setTimeout(() => { this.host.style.display = 'none' }, YIELD_MS)
   }
 
   onLauncherClick(handler: () => void): void {

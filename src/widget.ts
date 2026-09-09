@@ -18,6 +18,7 @@ export interface BootOptions {
 const LOAD_ERROR = 'Feedback could not be loaded.'
 const PREWARM_TIMEOUT_MS = 3000
 const PREWARM_DELAY_MS = 2500
+const LOGIN_HIDE_MAX_MS = 60_000
 
 interface NavigatorWithConnection extends Navigator {
   connection?: { saveData?: boolean }
@@ -48,10 +49,11 @@ class Widget {
   private readonly unread: UnreadTracker
   /** The token the mounted iframe was built with — `null` means a signed-out frame. */
   private frameToken: string | null = null
+  private hiddenForLogin = false
 
   constructor(private readonly options: BootOptions, private readonly ui: WidgetUi) {
     const cache = new SessionCache(options.origin)
-    this.auth = new AuthManager(options.baseUrl, options.origin, options.auth, cache)
+    this.auth = new AuthManager(options.baseUrl, options.origin, this.yieldingAuth(options.auth), cache)
     this.unread = new UnreadTracker(
       options.baseUrl,
       options.origin,
@@ -127,6 +129,34 @@ class Widget {
       // working frame if there is one, otherwise offer a retry.
       if (!this.ui.hasIframe) this.ui.showError(LOAD_ERROR, () => this.retry())
     }
+    finally {
+      this.reveal()
+    }
+  }
+
+  private yieldingAuth(auth: WidgetAuth | undefined): WidgetAuth | undefined {
+    if (!auth?.login) return auth
+    const login = auth.login
+    return {
+      getToken: () => auth.getToken(),
+      login: async () => {
+        this.hiddenForLogin = true
+        this.ui.setHidden(true)
+        const bail = setTimeout(() => this.reveal(), LOGIN_HIDE_MAX_MS)
+        try {
+          await login()
+        }
+        finally {
+          clearTimeout(bail)
+        }
+      },
+    }
+  }
+
+  private reveal(): void {
+    if (!this.hiddenForLogin) return
+    this.hiddenForLogin = false
+    this.ui.setHidden(false)
   }
 
   private retry(): void {
