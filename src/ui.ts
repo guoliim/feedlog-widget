@@ -147,6 +147,7 @@ iframe[hidden] { display: none; }
 
 @media (max-width: 520px) {
   .root { right: 12px; bottom: 12px; }
+  .root[data-open] .launcher { display: none; }
   .panel {
     position: fixed;
     inset: 0;
@@ -254,11 +255,13 @@ export class WidgetUi {
 
   openPanel(): void {
     this.panel.hidden = false
+    this.root.dataset.open = ''
     this.launcher.setAttribute('aria-expanded', 'true')
   }
 
   closePanel(): void {
     this.panel.hidden = true
+    delete this.root.dataset.open
     this.launcher.setAttribute('aria-expanded', 'false')
   }
 
