@@ -41,7 +41,7 @@ export async function boot(options: BootOptions): Promise<void> {
   if (!config.enabled) return
 
   await domReady()
-  new Widget(options, new WidgetUi(config.branding, options.theme)).start()
+  new Widget(options, new WidgetUi(config.branding, options.theme, config.launcher)).start()
 }
 
 class Widget {

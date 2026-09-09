@@ -1,4 +1,4 @@
-import type { WidgetTheme } from './types'
+import type { LauncherPlacement, WidgetTheme } from './types'
 
 const HOST_ID = 'feedlog-widget'
 /** Must outlast the `.root[data-yield]` transitions below. */
@@ -11,7 +11,7 @@ const STYLES = `
 .root {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: var(--edge-bottom, 20px);
   z-index: 2147483000;
   font: 400 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color-scheme: light;
@@ -20,6 +20,8 @@ const STYLES = `
   --muted: #6b7280;
   --line: #e5e7eb;
 }
+.root[data-align="left"] { right: auto; left: 20px; }
+.root[data-align="left"] .panel { right: auto; left: 0; }
 .root[data-yield] .panel { transform: translateY(100%); }
 .root[data-yield] .launcher { transform: translateY(96px); transition-delay: .1s; }
 .root[data-theme="dark"] {
@@ -77,7 +79,7 @@ const STYLES = `
   bottom: 72px;
   display: flex;
   width: 400px;
-  height: min(680px, calc(100vh - 120px));
+  height: min(680px, calc(100vh - 100px - var(--edge-bottom, 20px)));
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
@@ -146,7 +148,7 @@ iframe[hidden] { display: none; }
 .retry:hover { opacity: .9; }
 
 @media (max-width: 520px) {
-  .root { right: 12px; bottom: 12px; }
+  .root, .root[data-align="left"] { right: 12px; bottom: 12px; left: auto; }
   .root[data-open] .launcher { display: none; }
   .panel {
     position: fixed;
@@ -184,7 +186,7 @@ export class WidgetUi {
   private retryHandler: (() => void) | null = null
   private yieldTimer: ReturnType<typeof setTimeout> | undefined
 
-  constructor(branding: Branding, theme: WidgetTheme) {
+  constructor(branding: Branding, theme: WidgetTheme, launcher: LauncherPlacement) {
     this.host = document.createElement('div')
     this.host.id = HOST_ID
     const shadow = this.host.attachShadow({ mode: 'open' })
@@ -196,6 +198,8 @@ export class WidgetUi {
     this.root = el('div', 'root')
     this.root.style.setProperty('--primary', branding.primary)
     this.root.style.setProperty('--primary-foreground', branding.primaryForeground)
+    this.root.style.setProperty('--edge-bottom', `${launcher.bottomOffset}px`)
+    this.root.dataset.align = launcher.alignment
     applyTheme(this.root, theme)
 
     this.panel = el('div', 'panel')
