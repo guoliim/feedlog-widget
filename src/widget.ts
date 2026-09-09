@@ -144,7 +144,9 @@ class Widget {
         this.ui.setHidden(true)
         const bail = setTimeout(() => this.reveal(), LOGIN_HIDE_MAX_MS)
         try {
-          await login()
+          // .call keeps `this` on the host's auth object — a login() written as
+          // an object method would otherwise lose it.
+          await login.call(auth)
         }
         finally {
           clearTimeout(bail)
